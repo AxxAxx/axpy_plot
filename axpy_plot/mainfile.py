@@ -1,0 +1,166 @@
+# -*- coding: utf-8 -*-
+
+import argparse
+import sys
+
+import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+import subprocess
+import os
+import time
+import math
+import pdb
+import pandas as pd
+
+#
+# DEFINE YOUR FUNCTIONS HERE...
+#
+
+def rpt(args):
+    print('started')
+    Array = pd.read_table(args.file,delim_whitespace=True,skiprows=3, names=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'])
+
+    OutputArray = []
+
+    for index, row in Array.iterrows():
+        OutputArray.append([row['A']-1,row['B'],row['C'],row['D'],row['E'],row['F'],row['G'],row['H'],row['I'],row['J'],row['K'],row['L'],row['M'],row['N'],row['O'],row['P']])
+
+    x_val = [x[0] for x in OutputArray]
+    y_val = [x[1] for x in OutputArray]
+    z_val = [x[2] for x in OutputArray]
+        
+    print(OutputArray[0])
+    plt.plot(x_val,y_val,'k',label='X-direction', linestyle='-', linewidth = 1)
+    plt.plot(x_val,z_val,'k',label='Y-direction', linestyle='--', linewidth = 1)
+
+    print('MAX: %f' %(max(y_val)))
+    print('MAX: %f' %(max(z_val)))
+
+          #plt.plot(int(maximum_indices[0]), plotDataMax, 'o', color='Red', markersize=5)
+    #plt.plot(int(minimum_indices[0]), plotDataMin, 'o', color='Red', markersize=5)
+    #legend = plt.legend(loc='upper right', shadow=False)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Max force [N]')
+    
+    plt.title(args.title)
+    plt.grid(True)
+    #print(args.xlimits)
+    #if not args.xlimits[0] == 'auto':
+    #    plt.xlim(args.xlimits[0],args.xlimits[1])
+    #plt.xlim(0,float(args.xmax))
+    #plt.ylim(0,12000)
+    plt.draw()
+    plt.savefig(args.filename + '.png', dpi=300, bbox_inches='tight')
+    
+
+
+
+
+
+
+
+
+        
+                           
+def plot(args):
+    #abqlauncher = 'C:/SIMULIA/Commands/abaqus.bat'
+    #print(sys.version_info)
+    #print(os.path.dirname(np.__file__))
+    #time.sleep(2)
+    #p = subprocess.Popen( [abqlauncher, 'python', 'ODB_Reader.py', 'read',  'ExampleODB.odb'], shell=True)
+    #trash = p.communicate()
+    
+    plotData = np.array(pickle.load( open(args.file, "rb" ) ))
+    #xData=np.linspace(0,float(args.xmaxdata),len(plotData))
+    
+    Datalen = len(plotData)
+    
+    #plotDataMax = max(plotData)
+    #maximum_indices = np.where(plotData==plotDataMax)
+    
+    #plotDataMin = min(plotData)
+    #minimum_indices = np.where(plotData==plotDataMin)
+    
+
+
+
+
+    #os.remove('dump.db')
+
+    plt.figure(1)
+
+    if args.type == 'total':
+        print('TOTAL! ')
+        total = (np.power(plotData[:,1],2) + np.power(plotData[:,2],2))
+        total = np.power(total, 0.5)
+        plt.plot(plotData[:,0],total,'k',label='Bending Moment', linestyle='-', linewidth = 1)
+        plt.plot(plotData[:,0],np.ones(total.size)*19900,'k',label='Maximum allowed load', linestyle='--', linewidth = 1)
+
+        print('MAX: %f' %(np.amax(total)))
+
+        
+    elif args.type == 'separate':
+    
+        print('SEPARATE! ')
+    
+        plt.plot(plotData[:,0],plotData[:,2],'k',label='Section Moment 1', linestyle='-', linewidth = 1)
+        plt.plot(plotData[:,0],plotData[:,1],'k',label='Section Moment 2', linestyle='--', linewidth = 1)
+        
+        print('MAX: %f' %(np.amax(plotData)))
+        print('MIN: %f' %(np.amin(plotData)))
+
+    
+    #plt.plot(int(maximum_indices[0]), plotDataMax, 'o', color='Red', markersize=5)
+    #plt.plot(int(minimum_indices[0]), plotDataMin, 'o', color='Red', markersize=5)
+    legend = plt.legend(loc='upper right', shadow=False)
+    plt.xlabel(args.xtext)
+    plt.ylabel(args.ytext)
+    plt.title(args.title)
+    plt.grid(True)
+    print(args.xlimits)
+    if not args.xlimits[0] == 'auto':
+        plt.xlim(args.xlimits[0],args.xlimits[1])
+    #plt.xlim(0,float(args.xmax))
+    plt.ylim(0,22000)
+    plt.draw()
+    plt.savefig(args.file.replace('.db','') + '.PNG', dpi=300, bbox_inches='tight')
+    
+
+    
+def main():
+
+    '''Console script'''
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+
+    # A plot command
+    parser_read = subparsers.add_parser('plot', help='Plot')
+    parser_read.add_argument("file", type=str, help='database file')
+    parser_read.add_argument("-title", type=str, default=' ', help='Title string')
+    parser_read.add_argument("-xtext", type=str, default='X', help='X axis name')
+    parser_read.add_argument("-ytext", type=str, default='Y', help='Y axis name')
+    parser_read.add_argument("-xlimits", type=list, default=['auto','auto'], help='X axis limits [int, int], if left out use AUTO')
+    parser_read.add_argument("-type", type=str, default='separate', help='total or separate')
+    parser_read.set_defaults(func=plot)
+
+
+    parser_rpt = subparsers.add_parser('rpt', help='RPT')
+    parser_rpt.add_argument("file", help='rpt file')
+    parser_rpt.add_argument("-filename", help='png filename')
+    parser_rpt.add_argument("-title", type=str, default=' ', help='Title string')
+    parser_rpt.set_defaults(func=rpt)
+    
+
+    
+    if len(sys.argv) <=1:
+        sys.argv.append('--help')
+
+    # Show help if no arguments are given
+    args = parser.parse_args()
+    args.func(args)
+    
+    
+if __name__ == "__main__":
+    main()
